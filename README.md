@@ -34,26 +34,16 @@ A lightweight Windows desktop utility that detects your display's available refr
 dotnet build PowerProfile.App\PowerProfile.App.csproj
 ```
 
-### Release publish (framework-dependent)
+### Build + Installer (requires [Inno Setup 7](https://jrsoftware.org/isinfo.php))
 
 ```powershell
-.\build.ps1
+.\scripts\publish.ps1
+# Output: scripts\dist\PowerProfile-Setup-1.0.0.exe
 ```
 
-Output: `PowerProfile.App\bin\Release\net10.0-windows\publish\`
-
-### Self-contained (bundles .NET runtime, ~100 MB)
-
-```powershell
-.\build.ps1 -SelfContained
-```
-
-### Build + Installer (requires [Inno Setup 6](https://jrsoftware.org/isinfo.php))
-
-```powershell
-.\build.ps1 -MakeInstaller
-# Output: dist\PowerProfile-Setup-1.0.0.exe
-```
+The publish script creates a self-contained Windows build and uses Inno Setup 7 to
+produce one normal installer executable. The installer includes the application,
+creates an uninstaller, and offers Start Menu, desktop, and startup options.
 
 ---
 
@@ -61,24 +51,13 @@ Output: `PowerProfile.App\bin\Release\net10.0-windows\publish\`
 
 ### Option A — Inno Setup installer (recommended for distribution)
 
-1. Run `.\build.ps1 -MakeInstaller` to produce `dist\PowerProfile-Setup-1.0.0.exe`
+1. Run `.\scripts\publish.ps1` to produce `scripts\dist\PowerProfile-Setup-1.0.0.exe`
 2. Double-click the installer; choose an install directory in the wizard
-3. An optional Start Menu shortcut and startup entry are offered
-
-### Option B — PowerShell installer (no external tools needed)
-
-```powershell
-# After running .\build.ps1
-.\setup\Install.ps1
-# Or with explicit directory and startup entry:
-.\setup\Install.ps1 -InstallDir "C:\Tools\PowerProfile" -AddToStartup
-```
+3. Optional desktop shortcut and startup entry can be selected
 
 ### Uninstall
 
-```powershell
-.\setup\Install.ps1 -Uninstall
-```
+Use `Apps and Features` or the generated `Uninstall PowerProfile` entry.
 
 ---
 
