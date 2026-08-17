@@ -1,1 +1,16 @@
+# Build outputs
+bin/
+obj/
+dist/
+
+# NuGet restore artifacts (solution-level NuGet.Config is intentionally committed)
+*.user
+*.suo
+.vs/
+
+# Rider / VS Code
+.idea/
+.vscode/
+
+# Project instructions (not for public repo)
 CLAUDE.md
