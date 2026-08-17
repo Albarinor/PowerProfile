@@ -24,6 +24,9 @@ public sealed class MainForm : Form
     private StatusStrip  _status       = null!;
     private ToolStripStatusLabel _lblStatus = null!;
     private Button       _btnApplyNow  = null!;
+    private NotifyIcon    _trayIcon    = null!;
+    private ContextMenuStrip _trayMenu = null!;
+    private bool          _allowClose;
 
     // Refresh-rate tab
     private CheckBox     _chkRrEnabled     = null!;
@@ -33,14 +36,14 @@ public sealed class MainForm : Form
     private Label        _lblRrBattery     = null!;
     private ComboBox     _cmbRrBattery     = null!;
     private Label        _lblCurrentMode   = null!;
-    private Button       _btnRrApply       = null!;
+
 
     // Animation tab
     private CheckBox     _chkAniEnabled    = null!;
     private CheckBox     _chkAniAuto       = null!;
     private CheckBox     _chkAniOnAC       = null!;
     private CheckBox     _chkAniOnBattery  = null!;
-    private Button       _btnAniApply      = null!;
+
     private Label        _lblAniCurrent    = null!;
 
     // ── Constructor ──────────────────────────────────────────────────────────
@@ -49,6 +52,7 @@ public sealed class MainForm : Form
     {
         _mgr.Load();
         BuildUI();
+        BuildTrayIcon();
         PopulateRefreshRates();
         LoadSettingsIntoUI();
         RefreshStatusBar();
@@ -58,89 +62,311 @@ public sealed class MainForm : Form
 
     private void BuildUI()
     {
-        Text            = "PowerProfile";
-        FormBorderStyle = FormBorderStyle.FixedSingle;
-        MaximizeBox     = false;
-        Size            = new Size(480, 400);
-        StartPosition   = FormStartPosition.CenterScreen;
-        Font            = new Font("Segoe UI", 9f);
+        Text = "PowerProfile";
+        FormBorderStyle = FormBorderStyle.Sizable;
+        MaximizeBox = true;
+        MinimumSize = new Size(560, 440);
+        ClientSize = new Size(620, 500);
+        StartPosition = FormStartPosition.CenterScreen;
+        Font = new Font("Segoe UI", 10f);
+        AutoScaleMode = AutoScaleMode.Dpi;
+        BackColor = Color.FromArgb(243, 245, 247);
 
-        // Status bar
-        _status    = new StatusStrip { Dock = DockStyle.Bottom };
-        _lblStatus = new ToolStripStatusLabel("Ready") { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
+        var header = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = BackColor,
+            Padding = new Padding(24, 16, 24, 18),
+            ColumnCount = 1,
+            RowCount = 2,
+            Margin = new Padding(0),
+        };
+        header.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+        header.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
+
+        var title = new Label
+        {
+            Text = "PowerProfile",
+            Dock = DockStyle.Fill,
+            Font = new Font("Segoe UI Semibold", 15f),
+            ForeColor = Color.FromArgb(30, 34, 40),
+            TextAlign = ContentAlignment.MiddleLeft,
+            Margin = new Padding(0),
+        };
+        var subtitle = new Label
+        {
+            Text = "Manage display refresh rate and Windows animations",
+            Dock = DockStyle.Fill,
+            Font = new Font("Segoe UI", 9.5f),
+            ForeColor = Color.FromArgb(95, 102, 112),
+            TextAlign = ContentAlignment.MiddleLeft,
+            Margin = new Padding(0),
+        };
+        header.Controls.Add(title, 0, 0);
+        header.Controls.Add(subtitle, 0, 1);
+
+        _status = new StatusStrip
+        {
+            Dock = DockStyle.Fill,
+            AutoSize = false,
+            Height = 32,
+            SizingGrip = false,
+            Margin = new Padding(0),
+        };
+        _lblStatus = new ToolStripStatusLabel("Ready")
+        {
+            AutoSize = false,
+            Height = 28,
+            Padding = new Padding(8, 2, 8, 2),
+            Spring = true,
+            TextAlign = ContentAlignment.MiddleLeft,
+        };
         _status.Items.Add(_lblStatus);
 
-        // Apply Now button
         _btnApplyNow = new Button
         {
-            Text     = "Apply Now (auto-detect power source)",
-            Dock     = DockStyle.Bottom,
-            Height   = 32,
+            Text = "Apply changes",
+            Dock = DockStyle.Fill,
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Color.FromArgb(35, 112, 210),
+            ForeColor = Color.White,
+            Font = new Font("Segoe UI Semibold", 10f),
+            Margin = new Padding(24, 8, 24, 10),
         };
+        _btnApplyNow.FlatAppearance.BorderSize = 0;
         _btnApplyNow.Click += BtnApplyNow_Click;
 
-        // Tabs
-        _tabs       = new TabControl { Dock = DockStyle.Fill };
+        _tabs = new TabControl
+        {
+            Dock = DockStyle.Fill,
+            Padding = new Point(18, 8),
+            Margin = new Padding(0),
+        };
         _tabRefresh = new TabPage("Refresh Rate");
-        _tabAnim    = new TabPage("Animations");
+        _tabAnim = new TabPage("Animations");
         BuildRefreshTab();
         BuildAnimationTab();
         _tabs.TabPages.Add(_tabRefresh);
         _tabs.TabPages.Add(_tabAnim);
 
-        Controls.Add(_tabs);
-        Controls.Add(_btnApplyNow);
-        Controls.Add(_status);
+        var root = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = BackColor,
+            ColumnCount = 1,
+            RowCount = 4,
+            Margin = new Padding(0),
+            Padding = new Padding(0),
+        };
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 128));
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 64));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
+        root.Controls.Add(header, 0, 0);
+        root.Controls.Add(_tabs, 0, 1);
+        root.Controls.Add(_btnApplyNow, 0, 2);
+        root.Controls.Add(_status, 0, 3);
+        Controls.Add(root);
+    }
+
+    private void BuildTrayIcon()
+    {
+        Icon = CreateAppIcon();
+
+        _trayMenu = new ContextMenuStrip();
+        _trayMenu.Items.Add("Open PowerProfile", null, (_, _) => RestoreFromTray());
+        _trayMenu.Items.Add(new ToolStripSeparator());
+        _trayMenu.Items.Add("Exit PowerProfile", null, (_, _) => ExitApplication());
+
+        _trayIcon = new NotifyIcon
+        {
+            Icon = Icon,
+            Text = "PowerProfile",
+            ContextMenuStrip = _trayMenu,
+            Visible = true,
+        };
+        _trayIcon.DoubleClick += (_, _) => RestoreFromTray();
+        FormClosing += MainForm_FormClosing;
+    }
+
+    private void MainForm_FormClosing(object? sender, FormClosingEventArgs e)
+    {
+        if (_allowClose) return;
+
+        e.Cancel = true;
+        Hide();
+        _trayIcon.ShowBalloonTip(1200, "PowerProfile", "PowerProfile is still running in the notification area.", ToolTipIcon.Info);
+    }
+
+    private void RestoreFromTray()
+    {
+        Show();
+        WindowState = FormWindowState.Normal;
+        Activate();
+    }
+
+    private void ExitApplication()
+    {
+        _allowClose = true;
+        _trayIcon.Visible = false;
+        _trayIcon.Dispose();
+        _trayMenu.Dispose();
+        Application.Exit();
+    }
+
+    private static Icon CreateAppIcon()
+    {
+        using var bitmap = new Bitmap(32, 32);
+        using (Graphics g = Graphics.FromImage(bitmap))
+        using (var background = new SolidBrush(Color.FromArgb(35, 112, 210)))
+        using (var whitePen = new Pen(Color.White, 2.5f))
+        using (var lightBrush = new SolidBrush(Color.FromArgb(224, 239, 255)))
+        {
+            g.Clear(Color.Transparent);
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            g.FillRectangle(background, 3, 3, 26, 26);
+            g.DrawRectangle(whitePen, 7, 7, 17, 17);
+            g.FillRectangle(lightBrush, 12, 12, 11, 11);
+        }
+
+        return Icon.FromHandle(bitmap.GetHicon());
     }
 
     private void BuildRefreshTab()
     {
-        int y = 12;
+        _tabRefresh.Padding = new Padding(18);
 
-        _chkRrEnabled = Chk("Enable refresh-rate control", 12, y); y += 28;
-        _chkRrAuto    = Chk("Auto-switch based on power source", 24, y); y += 28;
+        var card = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.White,
+            Padding = new Padding(20),
+        };
 
-        _lblCurrentMode = Lbl("Current mode: —", 12, y); y += 22;
+        var table = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 6,
+            AutoSize = true,
+        };
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 42f));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 58f));
+        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        table.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
-        _lblRrAC    = Lbl("AC power rate:", 12, y);
-        _cmbRrAC    = Cmb(140, y, 90); y += 30;
-
-        _lblRrBattery = Lbl("Battery rate:", 12, y);
-        _cmbRrBattery = Cmb(140, y, 90); y += 30;
-
-        _btnRrApply = new Button { Text = "Apply Refresh Rate", Left = 12, Top = y, Width = 160, Height = 28 };
-        _btnRrApply.Click += BtnRrApply_Click;
-
+        _chkRrEnabled = Chk("Enable refresh-rate control", 0, 0);
+        _chkRrAuto    = Chk("Auto-switch based on power source", 0, 0);
+        _lblCurrentMode = Lbl("Current mode: —", 0, 0);
+        _lblRrAC    = Lbl("AC power rate:", 0, 0);
+        _cmbRrAC    = Cmb(0, 0, 0);
+        _lblRrBattery = Lbl("Battery rate:", 0, 0);
+        _cmbRrBattery = Cmb(0, 0, 0);
         _chkRrEnabled.CheckedChanged += (_, _) => SyncRrEnabled();
         _chkRrAuto.CheckedChanged    += (_, _) => SyncRrEnabled();
 
-        foreach (Control c in new Control[]
-            { _chkRrEnabled, _chkRrAuto, _lblCurrentMode,
-              _lblRrAC, _cmbRrAC, _lblRrBattery, _cmbRrBattery, _btnRrApply })
-            _tabRefresh.Controls.Add(c);
+        _chkRrEnabled.AutoSize = true;
+        _chkRrEnabled.Margin = new Padding(0, 0, 0, 6);
+        _chkRrAuto.AutoSize = true;
+        _chkRrAuto.Margin = new Padding(0, 0, 0, 10);
+        _lblCurrentMode.AutoSize = true;
+        _lblCurrentMode.Margin = new Padding(0, 0, 0, 14);
+
+        _lblRrAC.Dock = DockStyle.Fill;
+        _lblRrAC.TextAlign = ContentAlignment.MiddleLeft;
+        _lblRrAC.Margin = new Padding(0, 0, 14, 12);
+        _cmbRrAC.Dock = DockStyle.Fill;
+        _cmbRrAC.Margin = new Padding(0, 0, 0, 12);
+
+        _lblRrBattery.Dock = DockStyle.Fill;
+        _lblRrBattery.TextAlign = ContentAlignment.MiddleLeft;
+        _lblRrBattery.Margin = new Padding(0, 0, 14, 14);
+        _cmbRrBattery.Dock = DockStyle.Fill;
+        _cmbRrBattery.Margin = new Padding(0, 0, 0, 14);
+
+        var rrGrid = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            ColumnCount = 2,
+            RowCount = 2,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Padding = new Padding(0, 4, 0, 0),
+        };
+        rrGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
+        rrGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        rrGrid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        rrGrid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        rrGrid.Controls.Add(_lblRrAC, 0, 0);
+        rrGrid.Controls.Add(_cmbRrAC, 1, 0);
+        rrGrid.Controls.Add(_lblRrBattery, 0, 1);
+        rrGrid.Controls.Add(_cmbRrBattery, 1, 1);
+
+        table.Controls.Add(_chkRrEnabled, 0, 0);
+        table.SetColumnSpan(_chkRrEnabled, 2);
+        table.Controls.Add(_chkRrAuto, 0, 1);
+        table.SetColumnSpan(_chkRrAuto, 2);
+        table.Controls.Add(_lblCurrentMode, 0, 2);
+        table.SetColumnSpan(_lblCurrentMode, 2);
+        table.Controls.Add(rrGrid, 0, 3);
+        table.SetColumnSpan(rrGrid, 2);
+        card.Controls.Add(table);
+        _tabRefresh.Controls.Add(card);
     }
 
     private void BuildAnimationTab()
     {
-        int y = 12;
+        _tabAnim.Padding = new Padding(18);
 
-        _chkAniEnabled   = Chk("Enable animation control",              12, y); y += 28;
-        _chkAniAuto      = Chk("Auto-switch based on power source",      24, y); y += 28;
-        _chkAniOnAC      = Chk("Animations ON when on AC power",         36, y); y += 24;
-        _chkAniOnBattery = Chk("Animations ON when on battery",          36, y); y += 32;
+        var card = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.White,
+            Padding = new Padding(20),
+        };
 
-        _lblAniCurrent = Lbl("Current state: —", 12, y); y += 22;
+        var table = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 6,
+            AutoSize = true,
+        };
+        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        table.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
-        _btnAniApply = new Button { Text = "Apply Animations", Left = 12, Top = y, Width = 150, Height = 28 };
-        _btnAniApply.Click += BtnAniApply_Click;
-
+        _chkAniEnabled   = Chk("Enable animation control", 0, 0);
+        _chkAniAuto      = Chk("Auto-switch based on power source", 0, 0);
+        _chkAniOnAC      = Chk("Animations ON when on AC power", 0, 0);
+        _chkAniOnBattery = Chk("Animations ON when on battery", 0, 0);
+        _lblAniCurrent   = Lbl("Current state: —", 0, 0);
         _chkAniEnabled.CheckedChanged += (_, _) => SyncAniEnabled();
         _chkAniAuto.CheckedChanged    += (_, _) => SyncAniEnabled();
 
-        foreach (Control c in new Control[]
-            { _chkAniEnabled, _chkAniAuto, _chkAniOnAC, _chkAniOnBattery,
-              _lblAniCurrent, _btnAniApply })
-            _tabAnim.Controls.Add(c);
+        foreach (var chk in new[] { _chkAniEnabled, _chkAniAuto, _chkAniOnAC, _chkAniOnBattery })
+        {
+            chk.AutoSize = true;
+            chk.Margin = new Padding(0, 0, 0, 8);
+        }
+
+        _lblAniCurrent.AutoSize = true;
+        _lblAniCurrent.Margin = new Padding(0, 4, 0, 14);
+
+        table.Controls.Add(_chkAniEnabled, 0, 0);
+        table.Controls.Add(_chkAniAuto, 0, 1);
+        table.Controls.Add(_chkAniOnAC, 0, 2);
+        table.Controls.Add(_chkAniOnBattery, 0, 3);
+        table.Controls.Add(_lblAniCurrent, 0, 4);
+        card.Controls.Add(table);
+        _tabAnim.Controls.Add(card);
     }
 
     // ── Helpers: control factory ─────────────────────────────────────────────
@@ -167,8 +393,8 @@ public sealed class MainForm : Form
             foreach (var cmb in new[] { _cmbRrAC, _cmbRrBattery })
             {
                 cmb.Items.Clear();
-                cmb.Items.Add("(Highest)");
-                cmb.Items.Add("(Lowest)");
+                cmb.Items.Add("Auto (Highest)");
+                cmb.Items.Add("Auto (Lowest)");
                 foreach (uint r in _rates)
                     cmb.Items.Add($"{r} Hz");
                 cmb.SelectedIndex = 0;
@@ -225,7 +451,7 @@ public sealed class MainForm : Form
         _cmbRrAC.Enabled      = master;
         _lblRrBattery.Enabled = master && auto;
         _cmbRrBattery.Enabled = master && auto;
-        _btnRrApply.Enabled   = master;
+
     }
 
     private void SyncAniEnabled()
@@ -235,7 +461,7 @@ public sealed class MainForm : Form
         _chkAniAuto.Enabled      = master;
         _chkAniOnAC.Enabled      = master && auto;
         _chkAniOnBattery.Enabled = master && auto;
-        _btnAniApply.Enabled     = master;
+
     }
 
     private void UpdateAniCurrentLabel()
@@ -270,7 +496,7 @@ public sealed class MainForm : Form
 
     // ── Event handlers ───────────────────────────────────────────────────────
 
-    private void BtnRrApply_Click(object? sender, EventArgs e)
+    private void ApplyRefreshRate()
     {
         if (!_chkRrEnabled.Checked) return;
 
@@ -289,7 +515,7 @@ public sealed class MainForm : Form
         SaveSettings();
     }
 
-    private void BtnAniApply_Click(object? sender, EventArgs e)
+    private void ApplyAnimations()
     {
         if (!_chkAniEnabled.Checked) return;
 
@@ -308,8 +534,8 @@ public sealed class MainForm : Form
 
     private void BtnApplyNow_Click(object? sender, EventArgs e)
     {
-        BtnRrApply_Click(sender, e);
-        BtnAniApply_Click(sender, e);
+        ApplyRefreshRate();
+        ApplyAnimations();
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
