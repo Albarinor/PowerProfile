@@ -6,6 +6,7 @@
 #define AppId "{{A4F9C2D1-8E37-4F2A-9B65-1C7D3E5A8F20}}"
 #define SourceDir "..\scripts\dist\PowerProfile.App"
 #define PowerChangeDir "..\backup\PowerChange"
+#define IconFile "..\assets\PowerProfile.ico"
 
 [Setup]
 AppId={#AppId}
@@ -16,6 +17,7 @@ DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 OutputDir=..\scripts\dist
 OutputBaseFilename=PowerProfile-Setup-{#AppVersion}
+SetupIconFile={#IconFile}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern

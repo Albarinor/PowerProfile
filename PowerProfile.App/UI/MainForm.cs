@@ -216,20 +216,7 @@ public sealed class MainForm : Form
 
     private static Icon CreateAppIcon()
     {
-        using var bitmap = new Bitmap(32, 32);
-        using (Graphics g = Graphics.FromImage(bitmap))
-        using (var background = new SolidBrush(Color.FromArgb(35, 112, 210)))
-        using (var whitePen = new Pen(Color.White, 2.5f))
-        using (var lightBrush = new SolidBrush(Color.FromArgb(224, 239, 255)))
-        {
-            g.Clear(Color.Transparent);
-            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-            g.FillRectangle(background, 3, 3, 26, 26);
-            g.DrawRectangle(whitePen, 7, 7, 17, 17);
-            g.FillRectangle(lightBrush, 12, 12, 11, 11);
-        }
-
-        return Icon.FromHandle(bitmap.GetHicon());
+        return (Icon)Icon.ExtractAssociatedIcon(Application.ExecutablePath)!.Clone();
     }
 
     private void BuildRefreshTab()
