@@ -5,6 +5,8 @@
 #define AppExeName "PowerProfile.exe"
 #define AppId "{{A4F9C2D1-8E37-4F2A-9B65-1C7D3E5A8F20}}"
 #define SourceDir "..\scripts\dist\PowerProfile.App"
+#define PowerChangeDir "..\backup\PowerChange"
+#define IconFile "..\assets\PowerProfile.ico"
 
 [Setup]
 AppId={#AppId}
@@ -15,6 +17,7 @@ DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 OutputDir=..\scripts\dist
 OutputBaseFilename=PowerProfile-Setup-{#AppVersion}
+SetupIconFile={#IconFile}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -32,6 +35,10 @@ Name: "startup"; Description: "登录 Windows 时自动启动"; GroupDescription
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#PowerChangeDir}\RunHidden.vbs"; DestDir: "{autopf}\PowerChange"; Flags: ignoreversion
+Source: "{#PowerChangeDir}\PowerProfileSwitch.ps1"; DestDir: "{autopf}\PowerChange"; Flags: ignoreversion
+Source: "{#PowerChangeDir}\RefreshRateChanger.exe"; DestDir: "{autopf}\PowerChange"; Flags: ignoreversion
+Source: "{#PowerChangeDir}\PowerProfileLauncher.exe"; DestDir: "{autopf}\PowerChange"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
