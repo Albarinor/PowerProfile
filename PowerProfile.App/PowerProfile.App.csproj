@@ -8,6 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>PowerProfile</AssemblyName>
     <RootNamespace>PowerProfile</RootNamespace>
+    <ApplicationIcon>..\assets\PowerProfile.ico</ApplicationIcon>
   </PropertyGroup>
 
 </Project>
