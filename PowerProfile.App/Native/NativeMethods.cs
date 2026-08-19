@@ -108,6 +108,9 @@ internal static class NativeMethods
         IntPtr hWnd, uint Msg, UIntPtr wParam,
         string lParam, uint fuFlags, uint uTimeout, out UIntPtr lpdwResult);
 
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool SetForegroundWindow(IntPtr hWnd);
+
     // ── Power state ──────────────────────────────────────────────────────────
 
     [DllImport("kernel32.dll")]

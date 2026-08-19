@@ -5,6 +5,7 @@
 #define AppExeName "PowerProfile.exe"
 #define AppId "{{A4F9C2D1-8E37-4F2A-9B65-1C7D3E5A8F20}}"
 #define SourceDir "..\scripts\dist\PowerProfile.App"
+#define FlutterDir "..\scripts\dist\PowerProfile.FlutterUI"
 #define PowerChangeDir "..\backup\PowerChange"
 #define IconFile "..\assets\PowerProfile.ico"
 
@@ -35,6 +36,7 @@ Name: "startup"; Description: "登录 Windows 时自动启动"; GroupDescription
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#FlutterDir}\*"; DestDir: "{app}\PowerProfile.FlutterUI"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#PowerChangeDir}\RunHidden.vbs"; DestDir: "{autopf}\PowerChange"; Flags: ignoreversion
 Source: "{#PowerChangeDir}\PowerProfileSwitch.ps1"; DestDir: "{autopf}\PowerChange"; Flags: ignoreversion
 Source: "{#PowerChangeDir}\RefreshRateChanger.exe"; DestDir: "{autopf}\PowerChange"; Flags: ignoreversion
