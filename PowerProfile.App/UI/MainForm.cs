@@ -1,4 +1,5 @@
 using PowerProfile.App.Models;
+using PowerProfile.App.Native;
 using PowerProfile.App.Services;
 
 namespace PowerProfile.App.UI;
@@ -27,6 +28,7 @@ public sealed class MainForm : Form
     private NotifyIcon    _trayIcon    = null!;
     private ContextMenuStrip _trayMenu = null!;
     private bool          _allowClose;
+    private bool          _trayDisposed;
 
     // Refresh-rate tab
     private CheckBox     _chkRrEnabled     = null!;
@@ -174,20 +176,45 @@ public sealed class MainForm : Form
         Icon = CreateAppIcon();
 
         _trayMenu = new ContextMenuStrip();
-        _trayMenu.Items.Add("Open PowerProfile", null, (_, _) => RestoreFromTray());
+        _trayMenu.Items.Add("Open PowerProfile", null, (_, _) => OpenFlutterUi());
         _trayMenu.Items.Add(new ToolStripSeparator());
         _trayMenu.Items.Add("Exit PowerProfile", null, (_, _) => ExitApplication());
 
         _trayIcon = new NotifyIcon
         {
-            Icon = Icon,
+            Icon = (Icon)Icon.Clone(),
             Text = "PowerProfile",
             ContextMenuStrip = _trayMenu,
             Visible = true,
         };
-        _trayIcon.DoubleClick += (_, _) => RestoreFromTray();
+        // Keep the native host available for backend/tray services while the
+        // Flutter dashboard is the primary visible application surface.
+        _trayIcon.MouseUp += TrayIcon_MouseUp;
         FormClosing += MainForm_FormClosing;
+        FormClosed += MainForm_FormClosed;
     }
+
+    private void TrayIcon_MouseUp(object? sender, MouseEventArgs e)
+    {
+        if (e.Button == MouseButtons.Left)
+            OpenFlutterUi();
+    }
+
+    private void OpenFlutterUi()
+    {
+        if (FlutterUiLauncher.Launch())
+        {
+            Hide();
+            return;
+        }
+
+        Show();
+        MessageBox.Show(this,
+            "The Flutter dashboard executable was not found. Build PowerProfile.FlutterUI for development or reinstall PowerProfile.",
+            "PowerProfile", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+    }
+
+    internal bool LaunchPrimaryUi() => FlutterUiLauncher.Launch();
 
     private void MainForm_FormClosing(object? sender, FormClosingEventArgs e)
     {
@@ -198,25 +225,32 @@ public sealed class MainForm : Form
         _trayIcon.ShowBalloonTip(1200, "PowerProfile", "PowerProfile is still running in the notification area.", ToolTipIcon.Info);
     }
 
-    private void RestoreFromTray()
-    {
-        Show();
-        WindowState = FormWindowState.Normal;
-        Activate();
-    }
-
     private void ExitApplication()
     {
         _allowClose = true;
+        Close();
+    }
+
+    private void MainForm_FormClosed(object? sender, FormClosedEventArgs e)
+    {
+        if (_trayDisposed)
+            return;
+
+        _trayDisposed = true;
         _trayIcon.Visible = false;
         _trayIcon.Dispose();
         _trayMenu.Dispose();
-        Application.Exit();
     }
 
     private static Icon CreateAppIcon()
     {
-        return (Icon)Icon.ExtractAssociatedIcon(Application.ExecutablePath)!.Clone();
+        // ApplicationIcon embeds assets/PowerProfile.ico in the EXE. Extracting the
+        // associated icon avoids a file-path dependency and cloning prevents the
+        // NotifyIcon and Form from sharing a disposable native handle.
+        using var associated = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+        return associated is null
+            ? SystemIcons.Application
+            : (Icon)associated.Clone();
     }
 
     private void BuildRefreshTab()
