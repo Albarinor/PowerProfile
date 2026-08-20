@@ -10,6 +10,7 @@ internal static class Program
     {
         ApplicationConfiguration.Initialize();
         var backend = new PowerProfileBackend(new SettingsManager());
+        using var powerSourceMonitor = new PowerSourceMonitor(backend);
         var pipeServer = new PowerProfilePipeServer(backend);
         pipeServer.Start();
 

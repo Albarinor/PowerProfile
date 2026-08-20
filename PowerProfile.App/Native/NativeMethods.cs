@@ -75,19 +75,18 @@ internal static class NativeMethods
     public const uint SPIF_UPDATEINIFILE = 0x0001;
     public const uint SPIF_SENDCHANGE    = 0x0002;
 
-    // Additional SPI codes used by the legacy script for full animation coverage
-    public static readonly uint[] SPI_ANIMATION_EXTRAS =
-    [
-        0x1004, // SPI_SETLISTBOXSMOOTHSCROLLING
-        0x1006, // SPI_SETMENUANIMATION
-        0x1002, // SPI_SETCOMBOBOXANIMATION
-        0x1014, // SPI_SETTOOLTIPANIMATION
-        0x1016, // SPI_SETTOOLTIPFADE
-        0x1018, // SPI_SETCURSORSHADOW
-        0x101A, // SPI_SETUIEFFECTS
-        0x103F, // SPI_SETCLIENTAREAANIMATION
-        0x1042, // SPI_SETDISABLEOVERLAPPEDCONTENT
-    ];
+    // SPI_SET* values from WinUser.h. The GET and SET actions are distinct;
+    // using a GET value with SystemParametersInfo makes Windows reject the call.
+    public const uint SPI_SETCOMBOBOXANIMATION = 0x1005;
+    public const uint SPI_SETMENUANIMATION = 0x1003;
+    public const uint SPI_SETLISTBOXSMOOTHSCROLLING = 0x1007;
+    public const uint SPI_SETSELECTIONFADE = 0x1013;
+    public const uint SPI_SETTOOLTIPANIMATION = 0x1017;
+    public const uint SPI_SETTOOLTIPFADE = 0x1019;
+    public const uint SPI_SETCURSORSHADOW = 0x101B;
+    public const uint SPI_SETUIEFFECTS = 0x103F;
+    public const uint SPI_SETCLIENTAREAANIMATION = 0x1043;
+    public const uint SPI_SETDISABLEOVERLAPPEDCONTENT = 0x1041;
 
     [DllImport("user32.dll", SetLastError = true, EntryPoint = "SystemParametersInfoW")]
     public static extern bool SystemParametersInfoAni(
