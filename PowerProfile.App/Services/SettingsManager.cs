@@ -32,6 +32,7 @@ public sealed class SettingsManager
             {
                 var json = File.ReadAllText(_path);
                 Settings = JsonSerializer.Deserialize<AppSettings>(json, _opts) ?? new();
+                Settings.NormalizeAnimationPolicies();
             }
         }
         catch
@@ -45,6 +46,7 @@ public sealed class SettingsManager
     public void Save()
     {
         Directory.CreateDirectory(_dir);
+        Settings.NormalizeAnimationPolicies();
         var json = JsonSerializer.Serialize(Settings, _opts);
         File.WriteAllText(_path, json);
     }

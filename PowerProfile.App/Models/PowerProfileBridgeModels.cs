@@ -19,4 +19,6 @@ public sealed record PowerProfileApplyRequest(
     bool AnimationsEnabled,
     bool AnimationsAutoSwitch,
     bool AnimationsOnAC,
-    bool AnimationsOnBattery);
+    bool AnimationsOnBattery,
+    AnimationPolicy? AnimationPolicyAC,
+    AnimationPolicy? AnimationPolicyBattery);

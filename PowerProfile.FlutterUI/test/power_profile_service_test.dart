@@ -27,29 +27,33 @@ void main() {
     expect(state.animationsOnBattery, isFalse);
   });
 
-  test('ProfileState copyWith retains native fields and serializes apply payload', () {
-    final updated = ProfileState.fromJson(stateJson).copyWith(
-      refreshRateBattery: 120,
-      animationAutoSwitch: false,
-      animationsOnBattery: true,
-    );
+  test(
+    'ProfileState copyWith retains native fields and serializes apply payload',
+    () {
+      final updated = ProfileState.fromJson(stateJson).copyWith(
+        refreshRateBattery: 120,
+        animationAutoSwitch: false,
+        animationsOnBattery: true,
+      );
 
-    expect(updated.currentRefreshRate, 120);
-    expect(updated.availableRefreshRates, [60, 120, 144]);
-    expect(updated.toApplyJson(), {
-      'refreshRateEnabled': true,
-      'refreshRateAutoSwitch': false,
-      'refreshRateAC': 144,
-      'refreshRateBattery': 120,
-      'animationsEnabled': true,
-      'animationsAutoSwitch': false,
-      'animationsOnAC': true,
-      'animationsOnBattery': true,
-    });
-  });
+      expect(updated.currentRefreshRate, 120);
+      expect(updated.availableRefreshRates, [60, 120, 144]);
+      expect(updated.toApplyJson(), {
+        'refreshRateEnabled': true,
+        'refreshRateAutoSwitch': false,
+        'refreshRateAC': 144,
+        'refreshRateBattery': 120,
+        'animationsEnabled': true,
+        'animationsAutoSwitch': false,
+        'animationsOnAC': true,
+        'animationsOnBattery': true,
+      });
+    },
+  );
 
   test('ProfileState rejects an invalid backend response', () {
-    final invalid = Map<String, dynamic>.from(stateJson)..['availableRefreshRates'] = 'not a list';
+    final invalid = Map<String, dynamic>.from(stateJson)
+      ..['availableRefreshRates'] = 'not a list';
     expect(() => ProfileState.fromJson(invalid), throwsFormatException);
   });
 }
