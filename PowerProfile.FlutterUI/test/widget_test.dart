@@ -12,6 +12,10 @@ class FixedPowerProfileService implements PowerProfileService {
 
   @override
   Future<ProfileState> load() async => state;
+
+  @override
+  Future<ProfileState> setLanguage(String language) async =>
+      state.copyWith(uiLanguage: language);
 }
 
 void main() {

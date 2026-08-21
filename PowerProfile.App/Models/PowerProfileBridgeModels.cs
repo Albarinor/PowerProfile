@@ -21,4 +21,5 @@ public sealed record PowerProfileApplyRequest(
     bool AnimationsOnAC,
     bool AnimationsOnBattery,
     AnimationPolicy? AnimationPolicyAC,
-    AnimationPolicy? AnimationPolicyBattery);
+    AnimationPolicy? AnimationPolicyBattery,
+    string? UiLanguage);

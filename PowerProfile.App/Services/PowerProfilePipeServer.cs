@@ -82,6 +82,7 @@ public sealed class PowerProfilePipeServer : IAsyncDisposable
             {
                 "getState" => _backend.GetState(),
                 "apply" => _backend.Apply(request.Payload),
+                "setLanguage" => _backend.SetLanguage(request.Payload),
                 "applyRefreshRate" => _backend.ApplyRefreshRate(request.Payload),
                 "applyAnimations" => _backend.ApplyAnimations(request.Payload),
                 _ => throw new BackendCommandException("unknown_command", $"Unknown command '{request.Command}'."),

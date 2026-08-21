@@ -34,6 +34,7 @@ public sealed class PowerProfileBackend
         settings.AnimationsAutoSwitch = request.AnimationsAutoSwitch;
         settings.AnimationsOnAC = request.AnimationsOnAC;
         settings.AnimationsOnBattery = request.AnimationsOnBattery;
+        if (request.UiLanguage is "en" or "zh") settings.UiLanguage = request.UiLanguage;
         settings.AnimationPolicyAC = request.AnimationPolicyAC?.Clone() ?? AnimationPolicy.FromLegacy(request.AnimationsOnAC);
         settings.AnimationPolicyBattery = request.AnimationPolicyBattery?.Clone() ?? AnimationPolicy.FromLegacy(request.AnimationsOnBattery);
         _settings.Save();
@@ -47,6 +48,17 @@ public sealed class PowerProfileBackend
         var settings = _settings.Settings;
         ApplyRefreshRateForCurrentPower(settings);
         ApplyAnimationsForCurrentPower(settings);
+    }
+
+    /// <summary>Persists the dashboard language without replacing unsaved policy edits.</summary>
+    public PowerProfileState SetLanguage(JsonElement payload)
+    {
+        var request = DeserializePayload<LanguageRequest>(payload);
+        if (request.UiLanguage is not ("en" or "zh"))
+            throw new BackendCommandException("invalid_language", "Language must be 'en' or 'zh'.");
+        _settings.Settings.UiLanguage = request.UiLanguage;
+        _settings.Save();
+        return GetState();
     }
 
     public PowerProfileState ApplyRefreshRate(JsonElement payload)
@@ -98,17 +110,20 @@ public sealed class PowerProfileBackend
 
     private static void ApplyAnimationsForCurrentPower(AppSettings settings)
     {
-        if (!settings.AnimationsEnabled) return;
         var source = PowerStateService.GetCurrentSource();
         if (source == PowerStateService.PowerSource.Unknown) return;
         settings.NormalizeAnimationPolicies();
-        var policy = settings.AnimationsAutoSwitch && source == PowerStateService.PowerSource.Battery
-            ? settings.AnimationPolicyBattery! : settings.AnimationPolicyAC!;
+        var policy = !settings.AnimationsEnabled
+            ? AnimationPolicy.FromLegacy(false)
+            : settings.AnimationsAutoSwitch && source == PowerStateService.PowerSource.Battery
+                ? settings.AnimationPolicyBattery!
+                : settings.AnimationPolicyAC!;
         var result = AnimationService.Apply(policy);
         if (!result.Succeeded) throw new BackendCommandException("animation_apply_failed", result.ErrorMessage);
     }
 
     private sealed record RefreshRateRequest(uint RefreshRate);
+    private sealed record LanguageRequest(string? UiLanguage);
     private sealed record AnimationsRequest(bool Enabled);
 }
 
