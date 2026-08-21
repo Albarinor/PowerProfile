@@ -124,6 +124,7 @@ class ProfileState {
       clientAreaAnimation: false,
       disableOverlappedContent: true,
     ),
+    this.uiLanguage = 'en',
   });
   final String powerSource;
   final int currentRefreshRate;
@@ -136,6 +137,7 @@ class ProfileState {
       animationsOnBattery;
   final int refreshRateAc, refreshRateBattery;
   final AnimationPolicy animationPolicyAc, animationPolicyBattery;
+  final String uiLanguage;
 
   factory ProfileState.fromJson(Map<String, dynamic> json) {
     final settings = _map(json['settings'], 'settings');
@@ -199,6 +201,9 @@ class ProfileState {
         settings['animationPolicyBattery'],
         legacyEnabled: onBattery,
       ),
+      uiLanguage: settings['uiLanguage'] is String
+          ? settings['uiLanguage'] as String
+          : 'en',
     );
   }
   static Map<String, dynamic> _map(Object? value, String name) {
@@ -235,6 +240,7 @@ class ProfileState {
     bool? animationsOnBattery,
     AnimationPolicy? animationPolicyAc,
     AnimationPolicy? animationPolicyBattery,
+    String? uiLanguage,
   }) => ProfileState(
     powerSource: powerSource,
     currentRefreshRate: currentRefreshRate,
@@ -250,6 +256,7 @@ class ProfileState {
     animationPolicyAc: animationPolicyAc ?? this.animationPolicyAc,
     animationPolicyBattery:
         animationPolicyBattery ?? this.animationPolicyBattery,
+    uiLanguage: uiLanguage ?? this.uiLanguage,
   );
   Map<String, dynamic> toApplyJson() => {
     'refreshRateEnabled': refreshRateEnabled,
@@ -260,16 +267,28 @@ class ProfileState {
     'animationsAutoSwitch': animationAutoSwitch,
     'animationsOnAC': animationsOnAc,
     'animationsOnBattery': animationsOnBattery,
+    'animationPolicyAC': animationPolicyAc.toJson(),
+    'animationPolicyBattery': animationPolicyBattery.toJson(),
+    'uiLanguage': uiLanguage,
   };
 }
 
 abstract interface class PowerProfileService {
   Future<ProfileState> load();
   Future<ProfileState> apply(ProfileState state);
+  Future<ProfileState> setLanguage(String language);
 }
 
 class PowerProfileConnectionException implements Exception {
   PowerProfileConnectionException(this.message);
+  final String message;
+  @override
+  String toString() => message;
+}
+
+class PowerProfileCommandException implements Exception {
+  PowerProfileCommandException(this.code, this.message);
+  final String code;
   final String message;
   @override
   String toString() => message;
@@ -283,6 +302,10 @@ class WindowsPowerProfileService implements PowerProfileService {
   @override
   Future<ProfileState> apply(ProfileState state) =>
       _request('apply', state.toApplyJson()).then(ProfileState.fromJson);
+  @override
+  Future<ProfileState> setLanguage(String language) => _request('setLanguage', {
+    'uiLanguage': language,
+  }).then(ProfileState.fromJson);
   Future<Map<String, dynamic>> _request(
     String command, [
     Map<String, dynamic>? payload,
@@ -315,7 +338,9 @@ class WindowsPowerProfileService implements PowerProfileService {
       if (response['ok'] != true) {
         final error = response['error'];
         final message = error is Map ? error['message'] : null;
-        throw PowerProfileConnectionException(
+        final code = error is Map ? error['code'] : null;
+        throw PowerProfileCommandException(
+          code is String ? code : 'backend_rejected',
           message is String ? message : 'The backend rejected the request.',
         );
       }
@@ -347,4 +372,7 @@ class MockPowerProfileService implements PowerProfileService {
   Future<ProfileState> load() async => _state;
   @override
   Future<ProfileState> apply(ProfileState state) async => _state = state;
+  @override
+  Future<ProfileState> setLanguage(String language) async =>
+      _state = _state.copyWith(uiLanguage: language);
 }

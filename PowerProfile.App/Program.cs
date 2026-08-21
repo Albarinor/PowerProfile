@@ -10,6 +10,8 @@ internal static class Program
     {
         ApplicationConfiguration.Initialize();
         var backend = new PowerProfileBackend(new SettingsManager());
+        try { backend.ApplyForCurrentPower(); }
+        catch { /* A later explicit Apply returns the native error to the dashboard. */ }
         using var powerSourceMonitor = new PowerSourceMonitor(backend);
         var pipeServer = new PowerProfilePipeServer(backend);
         pipeServer.Start();

@@ -1,4 +1,5 @@
 using Microsoft.Win32;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using PowerProfile.App.Models;
 using PowerProfile.App.Native;
@@ -45,9 +46,31 @@ public static class AnimationService
         SetSpi(NativeMethods.SPI_SETUIEFFECTS, policy.UiEffects, "UI effects", failures);
         SetSpi(NativeMethods.SPI_SETCLIENTAREAANIMATION, policy.ClientAreaAnimation, "client-area animation", failures);
         SetSpi(NativeMethods.SPI_SETDISABLEOVERLAPPEDCONTENT, policy.DisableOverlappedContent, "disable overlapped content", failures);
+        var taskbarChanged = GetTaskbarAnimations() != policy.TaskbarAnimations;
         SetRegistry(policy, failures);
         BroadcastSettingChange();
+        if (taskbarChanged && !RestartExplorer())
+            failures.Add("Explorer refresh for taskbar animation policy");
         return new AnimationApplyResult(failures);
+    }
+
+    private static bool RestartExplorer()
+    {
+        try
+        {
+            foreach (var process in Process.GetProcessesByName("explorer"))
+            {
+                try { process.CloseMainWindow(); } catch { }
+                try { if (!process.WaitForExit(1500)) process.Kill(); } catch { }
+                process.Dispose();
+            }
+            Process.Start(new ProcessStartInfo("explorer.exe") { UseShellExecute = true });
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static void SetWindowAnimation(bool enabled, ICollection<string> failures)
@@ -72,6 +95,8 @@ public static class AnimationService
         {
             using var explorer = Registry.CurrentUser.CreateSubKey(KeyExplorerAdv);
             explorer?.SetValue("TaskbarAnimations", policy.TaskbarAnimations ? 1 : 0, RegistryValueKind.DWord);
+            if (GetTaskbarAnimations() != policy.TaskbarAnimations)
+                failures.Add("taskbar and thumbnail preview animations");
             using var metrics = Registry.CurrentUser.CreateSubKey(KeyWindowMetrics);
             metrics?.SetValue("MinAnimate", policy.WindowAnimation ? "1" : "0", RegistryValueKind.String);
         }
@@ -85,6 +110,8 @@ public static class AnimationService
     {
         NativeMethods.SendMessageTimeout(NativeMethods.HWND_BROADCAST, NativeMethods.WM_SETTINGCHANGE,
             UIntPtr.Zero, "Software", NativeMethods.SMTO_ABORTIFHUNG, 100, out _);
+        NativeMethods.SendMessageTimeout(NativeMethods.HWND_BROADCAST, NativeMethods.WM_SETTINGCHANGE,
+            UIntPtr.Zero, "Environment", NativeMethods.SMTO_ABORTIFHUNG, 100, out _);
     }
 }
 

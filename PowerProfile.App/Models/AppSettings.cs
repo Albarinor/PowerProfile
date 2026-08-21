@@ -48,6 +48,7 @@ public sealed class AppSettings
     public bool AnimationsAutoSwitch { get; set; } = true;
     public bool AnimationsOnAC { get; set; } = true;
     public bool AnimationsOnBattery { get; set; }
+    public string UiLanguage { get; set; } = "en";
 
     // Nullable specifically so legacy JSON can be migrated after deserialization.
     public AnimationPolicy? AnimationPolicyAC { get; set; }
@@ -68,6 +69,7 @@ public sealed class AppSettings
             RefreshRateAC = RefreshRateAC, RefreshRateBattery = RefreshRateBattery,
             AnimationsEnabled = AnimationsEnabled, AnimationsAutoSwitch = AnimationsAutoSwitch,
             AnimationsOnAC = AnimationsOnAC, AnimationsOnBattery = AnimationsOnBattery,
+            UiLanguage = UiLanguage,
             AnimationPolicyAC = AnimationPolicyAC!.Clone(), AnimationPolicyBattery = AnimationPolicyBattery!.Clone(),
         };
     }

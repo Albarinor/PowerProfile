@@ -135,7 +135,7 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   ProfileState _state = const ProfileState();
-  bool _loading = true, _applying = false;
+  bool _loading = true, _applying = false, _connected = false;
   String? _error;
   String _status = '';
   PageSection _section = PageSection.overview;
@@ -158,6 +158,8 @@ class _ProfilePageState extends State<ProfilePage> {
       if (mounted)
         setState(() {
           _state = s;
+          _language = s.uiLanguage == 'zh' ? AppLanguage.zh : AppLanguage.en;
+          _connected = true;
           _loading = false;
           _status = '${t['connected']} · ${_source(s.powerSource)}';
         });
@@ -165,8 +167,11 @@ class _ProfilePageState extends State<ProfilePage> {
       if (mounted)
         setState(() {
           _loading = false;
+          _connected = false;
           _error = e.toString();
-          _status = t['nativeUnavailable'];
+          _status = e is PowerProfileConnectionException
+              ? t['nativeUnavailable']
+              : t['failed'];
         });
     }
   }
@@ -196,15 +201,44 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Future<void> _setLanguage(AppLanguage language) async {
+    if (_applying || language == _language) return;
+    setState(() => _language = language);
+    try {
+      final saved = await widget.service.setLanguage(
+        language == AppLanguage.zh ? 'zh' : 'en',
+      );
+      if (mounted) setState(() => _state = saved);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _language = _state.uiLanguage == 'zh'
+              ? AppLanguage.zh
+              : AppLanguage.en;
+          _error = e.toString();
+          _status = t['failed'];
+        });
+      }
+    }
+  }
+
   String _source(String source) => source == 'AC'
       ? 'AC'
       : source == 'Battery'
-      ? '${_language == AppLanguage.zh ? '电池' : 'Battery'}'
+      ? _language == AppLanguage.zh
+            ? '电池'
+            : 'Battery'
       : _language == AppLanguage.zh
       ? '未知'
       : 'Unknown';
   void _update(ProfileState s) {
-    if (!_applying) setState(() => _state = s);
+    if (!_connected || _applying) return;
+    setState(() => _state = s);
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override
@@ -313,9 +347,11 @@ class _ProfilePageState extends State<ProfilePage> {
         DropdownButton<AppLanguage>(
           value: _language,
           isExpanded: true,
-          onChanged: (v) {
-            if (v != null) setState(() => _language = v);
-          },
+          onChanged: _applying
+              ? null
+              : (v) {
+                  if (v != null) _setLanguage(v);
+                },
           items: [
             DropdownMenuItem(value: AppLanguage.zh, child: Text(t['chinese'])),
             DropdownMenuItem(value: AppLanguage.en, child: Text(t['english'])),
@@ -392,6 +428,19 @@ class _ProfilePageState extends State<ProfilePage> {
           Icons.bolt_rounded,
           _source(_state.powerSource).toUpperCase(),
           const Color(0xff3dd6a3),
+        ),
+        const SizedBox(width: 12),
+        DropdownButton<AppLanguage>(
+          value: _language,
+          onChanged: _applying
+              ? null
+              : (value) {
+                  if (value != null) _setLanguage(value);
+                },
+          items: [
+            DropdownMenuItem(value: AppLanguage.zh, child: Text(t['chinese'])),
+            DropdownMenuItem(value: AppLanguage.en, child: Text(t['english'])),
+          ],
         ),
       ],
     ),
@@ -634,7 +683,7 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       ),
       FilledButton.icon(
-        onPressed: _applying ? null : _apply,
+        onPressed: _connected && !_applying ? _apply : null,
         icon: const Icon(Icons.check_rounded),
         label: Text(_applying ? t['applying'] : t['apply']),
       ),
