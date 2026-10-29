@@ -50,8 +50,11 @@ public sealed class MainForm : Form
 
     // ── Constructor ──────────────────────────────────────────────────────────
 
-    public MainForm()
+    private bool _startHidden;
+
+    public MainForm(bool startHidden = false)
     {
+        _startHidden = startHidden;
         _mgr.Load();
         BuildUI();
         BuildTrayIcon();
@@ -200,8 +203,16 @@ public sealed class MainForm : Form
             OpenFlutterUi();
     }
 
+    // Suppress the first show before a native window can flash on screen.
+    // Explicit tray restoration clears this flag and remains available.
+    protected override void SetVisibleCore(bool value)
+    {
+        base.SetVisibleCore(value && !_startHidden);
+    }
+
     private void OpenFlutterUi()
     {
+        _startHidden = false;
         if (FlutterUiLauncher.Launch())
         {
             Hide();

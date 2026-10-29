@@ -1,6 +1,6 @@
 ; PowerProfile standard Windows installer
 #define AppName "PowerProfile"
-#define AppVersion "1.0.0"
+#define AppVersion "1.0.1"
 #define AppPublisher "PowerProfile"
 #define AppExeName "PowerProfile.exe"
 #define AppId "{{A4F9C2D1-8E37-4F2A-9B65-1C7D3E5A8F20}}"
@@ -47,7 +47,7 @@ Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
 Name: "{commondesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
 [Registry]
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#AppName}"; ValueData: "{app}\{#AppExeName}"; Flags: uninsdeletevalue; Tasks: startup
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#AppName}"; ValueData: """{app}\{#AppExeName}"" --silent"; Flags: uninsdeletevalue; Tasks: startup
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "启动 {#AppName}"; Flags: nowait postinstall skipifsilent

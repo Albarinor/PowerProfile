@@ -19,7 +19,7 @@ dotnet build PowerProfile.App\PowerProfile.App.csproj
 .\scripts\publish.ps1
 ```
 
-The publish script produces a self-contained Windows build and, when Inno Setup is installed, `scripts\dist\PowerProfile-Setup-1.0.0.exe`. The native host's normal launch and tray **Open PowerProfile** action both resolve the Flutter dashboard. If the Flutter executable is missing, the native form remains available and shows an actionable warning.
+The publish script produces a self-contained Windows build and, when Inno Setup is installed, `scripts\dist\PowerProfile-Setup-1.0.1.exe`. The native host's normal launch and tray **Open PowerProfile** action both resolve the Flutter dashboard. If the Flutter executable is missing, the native form remains available and shows an actionable warning.
 
 ## Build and verify the Flutter dashboard
 
@@ -34,6 +34,12 @@ Set-Location .\PowerProfile.FlutterUI
 `verify-windows.ps1` runs `pub get`, analyze, tests, and `flutter build windows --debug`. `verify-launch.ps1` checks the expected debug executable path, launches it, and closes it after the smoke check.
 
 The supplied branding asset is copied from `assets\PowerProfile-icon.png` into the Flutter project. On Windows, Flutter communicates with the C# host through the named-pipe bridge described above; non-Windows runs use the explicit in-memory preview service.
+
+## Silent logon startup
+
+The installer's optional Windows logon startup uses `"PowerProfile.exe" --silent`. In this mode only the notification-area host and native backend run: neither the native window nor the Flutter dashboard opens. Manual launches without `--silent` still open the dashboard; one left click on the tray icon opens it on demand.
+
+To verify silent startup on Windows, run `scripts/test-silent-startup.ps1 -Executable <full-path-to-PowerProfile.exe>`. The regression test checks that the host remains alive without a visible native window or a newly launched Flutter process.
 
 ## Tray behavior
 

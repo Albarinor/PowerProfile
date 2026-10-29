@@ -30,6 +30,6 @@ Copy-Item $flutterRelease $flutterOut -Recurse -Force
 & $inno "$root\installer\PowerProfile.iss"
 if ($LASTEXITCODE -ne 0) { throw "Installer build failed: $LASTEXITCODE" }
 
-$installer = Join-Path $Output 'PowerProfile-Setup-1.0.0.exe'
+$installer = Join-Path $Output 'PowerProfile-Setup-1.0.1.exe'
 if (-not (Test-Path $installer)) { throw "Installer artifact not found: $installer" }
 Write-Output "PUBLISH_OK=$installer"

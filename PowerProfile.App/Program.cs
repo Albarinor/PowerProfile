@@ -6,8 +6,9 @@ namespace PowerProfile.App;
 internal static class Program
 {
     [STAThread]
-    static void Main()
+    static void Main(string[] args)
     {
+        bool silent = args.Contains("--silent", StringComparer.OrdinalIgnoreCase);
         ApplicationConfiguration.Initialize();
         var backend = new PowerProfileBackend(new SettingsManager());
         try { backend.ApplyForCurrentPower(); }
@@ -18,8 +19,8 @@ internal static class Program
 
         try
         {
-            using var form = new MainForm();
-            form.Shown += (_, _) =>
+            using var form = new MainForm(startHidden: silent);
+            if (!silent) form.Shown += (_, _) =>
             {
                 if (form.LaunchPrimaryUi())
                 {
